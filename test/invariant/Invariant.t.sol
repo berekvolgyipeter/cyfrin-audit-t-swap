@@ -38,6 +38,38 @@ contract Invariant is StdInvariant, Test {
 
         handler = new TSwapPoolHandler(pool);
 
+        bytes4[] memory selectors = new bytes4[](2);
+        selectors[0] = TSwapPoolHandler.deposit.selector;
+        selectors[1] = TSwapPoolHandler.swapPoolTokenForWethBasedOnOutputWeth.selector;
+
+        targetSelector(FuzzSelector({ addr: address(handler), selectors: selectors }));
         targetContract(address(handler));
+    }
+
+    // Normal Invariant
+    // x * y = k
+    // x * y = (x + ∆x) * (y − ∆y)
+    // x = Token Balance X
+    // y = Token Balance Y
+    // ∆x = Change of token balance X
+    // ∆y = Change of token balance Y
+    // β = (∆y / y)
+    // α = (∆x / x)
+
+    // Final invariant equation without fees:
+    // ∆x = (β/(1-β)) * x
+    // ∆y = (α/(1+α)) * y
+
+    // Invariant with fees
+    // ρ = fee (between 0 & 1, aka a percentage)
+    // γ = (1 - p)
+    // ∆x = (β/(1-β)) * (1/γ) * x
+    // ∆y = (αγ/1+αγ) * y
+    function invariant_deltaXFollowsMath() public view {
+        assertEq(handler.deltaX(), handler.expDeltaX());
+    }
+
+    function invariant_deltaYFollowsMath() public view {
+        assertEq(handler.deltaY(), handler.expDeltaY());
     }
 }

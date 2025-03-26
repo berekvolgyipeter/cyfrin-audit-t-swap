@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { Test, console2 } from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 import { TSwapPool } from "../../src/TSwapPool.sol";
 import { ERC20Mock } from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
@@ -47,6 +47,48 @@ contract TSwapPoolHandler is Test {
             wethToDeposit: wethAmount,
             minimumLiquidityTokensToMint: 0,
             maximumPoolTokensToDeposit: poolTokenAmount,
+            deadline: uint64(block.timestamp)
+        });
+        vm.stopPrank();
+
+        _updateEndingDeltas();
+    }
+
+    function swapPoolTokenForWethBasedOnOutputWeth(uint256 outputWethAmount) public {
+        if (weth.balanceOf(address(pool)) <= pool.getMinimumWethDepositAmount()) {
+            return;
+        }
+        outputWethAmount = bound(outputWethAmount, pool.getMinimumWethDepositAmount(), weth.balanceOf(address(pool)));
+        // If these two values are the same, we would divide by 0
+        if (outputWethAmount == weth.balanceOf(address(pool))) {
+            return;
+        }
+        // This should be calculated in the test, but it's mathematically vrifyable that this function is correct
+        uint256 poolTokenAmount = pool.getInputAmountBasedOnOutput({
+            outputAmount: outputWethAmount,
+            inputReserves: poolToken.balanceOf(address(pool)),
+            outputReserves: weth.balanceOf(address(pool))
+        });
+        if (poolTokenAmount > type(uint64).max) {
+            return;
+        }
+        // Mint any necessary amount of pool tokens
+        if (poolToken.balanceOf(user) < poolTokenAmount) {
+            poolToken.mint(user, poolTokenAmount - poolToken.balanceOf(user) + 1);
+        }
+
+        // outputWethAmount is negative since we are removing WETH from the system
+        _updateStartingDeltas(-int256(outputWethAmount), int256(poolTokenAmount));
+
+        vm.startPrank(user);
+        // Approve tokens so they can be pulled by the pool during the swap
+        poolToken.approve(address(pool), type(uint256).max);
+
+        // Execute swap, giving pool tokens, receiving specified amount of WETH
+        pool.swapExactOutput({
+            inputToken: poolToken,
+            outputToken: weth,
+            outputAmount: outputWethAmount,
             deadline: uint64(block.timestamp)
         });
         vm.stopPrank();
