@@ -1,10 +1,10 @@
 INFO:Detectors:
-TSwapPool.revertIfZero(uint256) (src/TSwapPool.sol#57-62) uses a dangerous strict equality:
-        - amount == 0 (src/TSwapPool.sol#58)
+TSwapPool.revertIfZero(uint256) (src/TSwapPool.sol#80-85) uses a dangerous strict equality:
+        - amount == 0 (src/TSwapPool.sol#81)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#dangerous-strict-equalities
 INFO:Detectors:
 PoolFactory.constructor(address).wethToken (src/PoolFactory.sol#40) lacks a zero-check on :
-                - i_wethToken = wethToken (src/PoolFactory.sol#42)
+                - i_wethToken = wethToken (src/PoolFactory.sol#41)
 Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#missing-zero-address-validation
 INFO:Detectors:
 3 different versions of Solidity are used:
